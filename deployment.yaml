@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: population-api-deployment
+  labels:
+    app: population-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: population-api
+  template:
+    metadata:
+      labels:
+        app: population-api
+    spec:
+      containers:
+        - name: population-api
+          image: IMAGE_URI_PLACEHOLDER # GitHub Actions will replace this
+          ports:
+            - containerPort: 80

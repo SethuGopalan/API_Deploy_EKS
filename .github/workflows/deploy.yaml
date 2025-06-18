@@ -1,0 +1,40 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: population-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password | docker login --username AWS --password-stdin <your-aws-account-id>.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t $ECR_REPO:$GITHUB_SHA .
+        docker tag $ECR_REPO:$GITHUB_SHA <your-aws-account-id>.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO:$GITHUB_SHA
+        docker push <your-aws-account-id>.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO:$GITHUB_SHA
+
+    - name: Update manifests and deploy
+      run: |
+        sed -i "s|<your-AWS-ECR-image>|<your-aws-account-id>.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPO:$GITHUB_SHA|g" deployment.yaml
+        kubectl apply -f deployment.yaml
+        kubectl apply -f service.yaml
